@@ -1,40 +1,59 @@
-// TURBO COACH — Teacher Arbiter Edition
-// Learner answers NEVER train the system.
-// Teachers quietly approve / reject FEEDBACK PHRASING only.
+// TURBO COACH — CALIBRATED CORE
+// Teacher-led, deterministic, classroom-safe
 
 // =====================
 // FEEDBACK BANK
 // =====================
 const FEEDBACK_BANK = {
-  start: [
-    "Add a verb to make a sentence.",
-    "You need a verb to get started."
+  noVerb: [
+    "You need a verb to make a sentence. Start with **es** (he is) or **tiene** (he has)."
+  ],
+  wrongPerson: [
+    "You’ve used a verb, but it’s the wrong person. Say **es** (he is), not **eres** (you are).",
+    "Good attempt — change the verb to third person: **es**, not **eres**."
   ],
   fragment: [
-    "Good start. Write a full sentence.",
-    "You’ve begun — now finish the idea."
+    "Good start. Write a full sentence about the person."
   ],
   develop: [
-    "This works. Add another detail (appearance, personality, place…).",
-    "Correct sentence. Say one more thing.",
-    "That’s fine — extend it with another idea."
+    "This works. Add one more detail about the person.",
+    "Correct sentence. Say one more thing (appearance, personality, place…)."
   ],
   opinion: [
-    "Add an opinion. Try: **Creo que…** / **Je pense que…** / **Ich denke, dass…**",
-    "Good answer. Give a reason using **porque / parce que / weil**."
+    "Good answer. Add an opinion or reason — try **Creo que…** or **porque…**."
   ],
   strong: [
-    "Very good. Check accuracy and add one more specific detail.",
-    "Strong answer. Polish it for top marks."
+    "Very good. Check accuracy and add one more specific detail."
   ]
 };
 
 // =====================
-// RUBRIC HELPERS
+// HELPERS
 // =====================
-function wc(t) { return t.trim().split(/\s+/).length; }
+function wc(t) {
+  return t.trim().split(/\s+/).length;
+}
 
-function hasVerb(t, lang) {
+// Detect ANY verb attempt (even wrong person)
+function hasAnyVerbAttempt(t, lang) {
+  t = t.toLowerCase();
+  if (lang === "es") {
+    return /\b(es|está|eres|soy|somos|tiene|tengo|vive|vives|gusta|gustas)\b/.test(t);
+  }
+  if (lang === "fr") {
+    return /\b(est|es|suis|as|a|habite|habites|aime|aimes)\b/.test(t);
+  }
+  if (lang === "de") {
+    return /\b(ist|bin|bist|hat|habe|hast|wohnt|wohnst|mag|magst)\b/.test(t);
+  }
+  if (lang === "ga") {
+    return /\b(tá|is|táim|táimid)\b/.test(t);
+  }
+  return false;
+}
+
+// Detect CORRECT person for the task (3rd person)
+function hasCorrectPersonVerb(t, lang) {
   t = t.toLowerCase();
   if (lang === "es") return /\b(es|está|tiene|vive|gusta|gustan)\b/.test(t);
   if (lang === "fr") return /\b(est|a|habite|aime)\b/.test(t);
@@ -61,31 +80,41 @@ function pick(arr) {
 }
 
 // =====================
-// COACH ENGINE
+// COACH ENGINE (FIXED)
 // =====================
 function coach(answer, lang) {
 
-  if (!hasVerb(answer, lang)) {
-    return { score: 0, focus: "Start", key: "start" };
+  // 1️⃣ No verb attempt at all
+  if (!hasAnyVerbAttempt(answer, lang)) {
+    return { score: 0, focus: "Start", key: "noVerb" };
   }
 
-  if (wc(answer) <= 2) {
+  // 2️⃣ Verb attempted but wrong person
+  if (!hasCorrectPersonVerb(answer, lang)) {
+    return { score: 0, focus: "Verb form", key: "wrongPerson" };
+  }
+
+  // 3️⃣ Fragment
+  if (wc(answer) <= 3) {
     return { score: 2, focus: "Fragment", key: "fragment" };
   }
 
+  // 4️⃣ Simple but correct
   if (!hasConnector(answer) && !hasOpinion(answer, lang)) {
     return { score: 5, focus: "Development", key: "develop" };
   }
 
+  // 5️⃣ Developed, no opinion
   if (!hasOpinion(answer, lang)) {
     return { score: 7, focus: "Competence", key: "opinion" };
   }
 
+  // 6️⃣ Strong
   return { score: 8, focus: "Strong", key: "strong" };
 }
 
 // =====================
-// UI + TEACHER ARBITER
+// UI
 // =====================
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -107,26 +136,8 @@ document.addEventListener("DOMContentLoaded", () => {
       <div><strong>Focus:</strong> ${r.focus}</div>
       <div><strong>Do this:</strong> ${feedback}</div>
 
-      <div class="teacherBar">
-        <button data-v="clear">👍 Clear</button>
-        <button data-v="unclear">🔁 Could be clearer</button>
-        <button data-v="bad">❌ Not helpful</button>
-      </div>
-
       <button id="retry">Try again</button>
     `;
-
-    out.querySelectorAll(".teacherBar button").forEach(b => {
-      b.onclick = () => {
-        console.log("TEACHER FEEDBACK", {
-          key: r.key,
-          phrasing: feedback,
-          rating: b.dataset.v
-        });
-        b.innerText = "✓";
-        b.disabled = true;
-      };
-    });
 
     document.getElementById("retry").onclick = () => {
       ans.value = "";
