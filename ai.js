@@ -1,7 +1,7 @@
 // ai.js — SAFE AI BRIDGE (Cloudflare Worker)
 
 async function classifyAnswer(payload) {
-  const res = await fetch("https://YOUR-WORKER-URL-HERE", {
+  const res = await fetch("loops-ai-coach.seansynge.workers.dev", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
