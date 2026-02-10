@@ -1,5 +1,5 @@
-// TURBO COACH — CALIBRATED CORE
-// Teacher-led, deterministic, classroom-safe
+// TURBO COACH — CALIBRATED + TEACHER ARBITER
+// Deterministic. Classroom-safe. No AI.
 
 // =====================
 // FEEDBACK BANK
@@ -34,25 +34,17 @@ function wc(t) {
   return t.trim().split(/\s+/).length;
 }
 
-// Detect ANY verb attempt (even wrong person)
+// Any verb attempt (even wrong person)
 function hasAnyVerbAttempt(t, lang) {
   t = t.toLowerCase();
-  if (lang === "es") {
-    return /\b(es|está|eres|soy|somos|tiene|tengo|vive|vives|gusta|gustas)\b/.test(t);
-  }
-  if (lang === "fr") {
-    return /\b(est|es|suis|as|a|habite|habites|aime|aimes)\b/.test(t);
-  }
-  if (lang === "de") {
-    return /\b(ist|bin|bist|hat|habe|hast|wohnt|wohnst|mag|magst)\b/.test(t);
-  }
-  if (lang === "ga") {
-    return /\b(tá|is|táim|táimid)\b/.test(t);
-  }
+  if (lang === "es") return /\b(es|está|eres|soy|somos|tiene|tengo|vive|vives|gusta|gustas)\b/.test(t);
+  if (lang === "fr") return /\b(est|es|suis|a|as|habite|habites|aime|aimes)\b/.test(t);
+  if (lang === "de") return /\b(ist|bin|bist|hat|habe|hast|wohnt|wohnst|mag|magst)\b/.test(t);
+  if (lang === "ga") return /\b(tá|is|táim|táimid)\b/.test(t);
   return false;
 }
 
-// Detect CORRECT person for the task (3rd person)
+// Correct person for task (3rd person)
 function hasCorrectPersonVerb(t, lang) {
   t = t.toLowerCase();
   if (lang === "es") return /\b(es|está|tiene|vive|gusta|gustan)\b/.test(t);
@@ -80,41 +72,35 @@ function pick(arr) {
 }
 
 // =====================
-// COACH ENGINE (FIXED)
+// COACH ENGINE
 // =====================
 function coach(answer, lang) {
 
-  // 1️⃣ No verb attempt at all
   if (!hasAnyVerbAttempt(answer, lang)) {
     return { score: 0, focus: "Start", key: "noVerb" };
   }
 
-  // 2️⃣ Verb attempted but wrong person
   if (!hasCorrectPersonVerb(answer, lang)) {
     return { score: 0, focus: "Verb form", key: "wrongPerson" };
   }
 
-  // 3️⃣ Fragment
   if (wc(answer) <= 3) {
     return { score: 2, focus: "Fragment", key: "fragment" };
   }
 
-  // 4️⃣ Simple but correct
   if (!hasConnector(answer) && !hasOpinion(answer, lang)) {
     return { score: 5, focus: "Development", key: "develop" };
   }
 
-  // 5️⃣ Developed, no opinion
   if (!hasOpinion(answer, lang)) {
     return { score: 7, focus: "Competence", key: "opinion" };
   }
 
-  // 6️⃣ Strong
   return { score: 8, focus: "Strong", key: "strong" };
 }
 
 // =====================
-// UI
+// UI + TEACHER ARBITER
 // =====================
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -136,8 +122,26 @@ document.addEventListener("DOMContentLoaded", () => {
       <div><strong>Focus:</strong> ${r.focus}</div>
       <div><strong>Do this:</strong> ${feedback}</div>
 
+      <div class="teacherBar">
+        <button data-v="clear">👍 Clear</button>
+        <button data-v="unclear">🔁 Could be clearer</button>
+        <button data-v="bad">❌ Not helpful</button>
+      </div>
+
       <button id="retry">Try again</button>
     `;
+
+    out.querySelectorAll(".teacherBar button").forEach(b => {
+      b.onclick = () => {
+        console.log("TEACHER FEEDBACK", {
+          key: r.key,
+          phrasing: feedback,
+          rating: b.dataset.v
+        });
+        b.innerText = "✓";
+        b.disabled = true;
+      };
+    });
 
     document.getElementById("retry").onclick = () => {
       ans.value = "";
