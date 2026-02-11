@@ -1,31 +1,68 @@
-// TURBO COACH — AI CLASSIFIER WITH SAFE FALLBACK
-// No imports. GitHub Pages safe.
+// TURBO COACH — HYBRID RULE + AI ENGINE
 
 function fallbackCoach(answer) {
   const wc = answer.trim().split(/\s+/).length;
 
   if (wc < 2) {
-    return {
-      score: 0,
-      focus: "Start",
-      feedback: "Write a full sentence."
-    };
+    return { score: 0, focus: "Start", feedback: "Write a full sentence." };
   }
 
   if (wc < 4) {
-    return {
-      score: 5,
-      focus: "Development",
-      feedback: "Good start. Add another detail."
-    };
+    return { score: 4, focus: "Development", feedback: "Add one more clear detail." };
   }
 
-  return {
-    score: 7,
-    focus: "Development",
-    feedback: "Good answer. Add an opinion or reason."
-  };
+  return { score: 7, focus: "Development", feedback: "Add a specific detail or reason." };
 }
+
+// ---------- RULE ENGINE ----------
+
+function ruleCheck(answer, lang) {
+  const a = answer.toLowerCase().trim();
+
+  // Spanish person mismatch
+  if (lang === "es") {
+    if (/\bmi amigo\b/.test(a) && /\beres\b/.test(a)) {
+      return {
+        score: 3,
+        focus: "Verb agreement",
+        feedback: "“Eres” is for 'you'. Use “es” for 'he'.",
+      };
+    }
+  }
+
+  // French apostrophe
+  if (lang === "fr") {
+    if (/\bcest\b/.test(a)) {
+      return {
+        score: 4,
+        focus: "Apostrophe",
+        feedback: "Use “c’est” with an apostrophe.",
+      };
+    }
+    if (/\bami\b/.test(a) && /\bjolie\b/.test(a)) {
+      return {
+        score: 4,
+        focus: "Agreement",
+        feedback: "“Ami” is masculine. Use “joli”, not “jolie”.",
+      };
+    }
+  }
+
+  // Irish fada
+  if (lang === "ga") {
+    if (/\bta se\b/.test(a)) {
+      return {
+        score: 4,
+        focus: "Accent",
+        feedback: "Use “Tá sé” with a fada and accent.",
+      };
+    }
+  }
+
+  return null;
+}
+
+// ---------- MAIN ----------
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -34,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const ans = document.getElementById("answer");
 
   runBtn.onclick = async () => {
+
     const answer = ans.value.trim();
     const lang = document.getElementById("lang").value;
 
@@ -41,20 +79,23 @@ document.addEventListener("DOMContentLoaded", () => {
     out.classList.remove("hidden");
     out.innerHTML = "Thinking…";
 
-    let result = null;
+    // 1️⃣ RULE FIRST
+    let result = ruleCheck(answer, lang);
 
-    // TRY AI FIRST
-    try {
-      result = await window.classifyAnswer({
-        task: "Describe your best friend",
-        answer: answer,
-        lang: lang
-      });
-    } catch (e) {
-      console.warn("AI failed, using fallback");
+    // 2️⃣ AI SECOND
+    if (!result) {
+      try {
+        result = await window.classifyAnswer({
+          task: "Describe your best friend",
+          answer,
+          lang
+        });
+      } catch (e) {
+        console.warn("AI failed, using fallback");
+      }
     }
 
-    // FALLBACK IF AI FAILS
+    // 3️⃣ FALLBACK
     if (!result) {
       result = fallbackCoach(answer);
     }
@@ -73,7 +114,6 @@ document.addEventListener("DOMContentLoaded", () => {
       <button id="retry">Try again</button>
     `;
 
-    // TEACHER ARBITER (optional, silent)
     out.querySelectorAll(".teacherBar button").forEach(btn => {
       btn.onclick = () => {
         console.log("TEACHER FEEDBACK", {
