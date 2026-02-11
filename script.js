@@ -1,5 +1,5 @@
 // ==============================
-// TURBO COACH — HYBRID AUTHORITY ENGINE
+// TURBO COACH — HYBRID AUTHORITY ENGINE (ALL TENSES)
 // ==============================
 
 const CONFIG = { ROUNDS: 3 };
@@ -18,28 +18,63 @@ let scores = [];
 let focusLog = [];
 let currentPrompt = "";
 
-// ---------------- PROMPT ----------------
+// ---------------- PROMPTS ----------------
 
 function getRandomPrompt() {
   return PROMPT_BANK[Math.floor(Math.random() * PROMPT_BANK.length)];
 }
 
-// ---------------- VERB DETECTION ----------------
+// ---------------- VERB DETECTION (MULTI-TENSE) ----------------
 
 function hasVerb(answer, lang) {
+
   const a = answer.toLowerCase();
 
-  if (lang === "es")
-    return /\b(es|soy|eres|somos|está|estoy|estamos|tiene|tengo|tienes|vive|vivo|vives|hay|gustan?|puedo|podría|podre|podré)\b/.test(a);
+  // -------- SPANISH --------
+  if (lang === "es") {
+    return /\b(
+      fui|fue|fuimos|eran?|era|estaba|estaban|estuve|estuvo|
+      es|soy|eres|somos|está|estoy|estamos|
+      hay|hubo|había|habia|
+      iré|ire|irá|ira|vamos|voy|vas|van|
+      [a-záéíóúñ]+(o|as|a|amos|an|é|aste|ó|aron|aba|abas|aban|ía|ías|ieron|í)
+    )\b/i.test(a);
+  }
 
-  if (lang === "fr")
-    return /\b(est|suis|es|sommes|avez|a|ont|ai|aime|habite|vais|va)\b/.test(a);
+  // -------- FRENCH --------
+  if (lang === "fr") {
+    return /\b(
+      suis|es|est|sommes|êtes|sont|
+      ai|as|a|avons|avez|ont|
+      étais|était|étaient|
+      allé|allée|allés|allées|
+      vais|va|allons|irez|irai|
+      [a-zéèê]+(e|es|ent|ons|ai|ais|ait|aient|é|ée|ées|és)
+    )\b/i.test(a);
+  }
 
-  if (lang === "ga")
-    return /\b(tá|is|bhfuil|bíonn|bhí)\b/.test(a);
+  // -------- GERMAN --------
+  if (lang === "de") {
+    return /\b(
+      bin|bist|ist|sind|seid|
+      habe|hast|hat|haben|hattet|
+      war|waren|warst|
+      ging|gingen|gingst|
+      werde|wirst|wird|werden|
+      [a-zäöüß]+(e|st|t|en)
+    )\b/i.test(a);
+  }
 
-  if (lang === "de")
-    return /\b(ist|bin|bist|hat|habe|hast|sind|mag|wohne)\b/.test(a);
+  // -------- IRISH --------
+  if (lang === "ga") {
+    return /\b(
+      tá|táim|táimid|bhí|bhíomar|bhfuil|
+      is|ba|bíonn|
+      chuaigh|rachaidh|rachaimid|
+      rinne|rinneamar|
+      [a-záéíóú]+(ann|aim|amar|fidh|faidh|íonn)
+    )\b/i.test(a);
+  }
 
   return false;
 }
@@ -59,28 +94,30 @@ function ruleCheck(answer, lang) {
   }
 
   if (!hasVerb(answer, lang)) {
-    if (lang === "es")
-      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **es**, **tiene**, **vive**." };
 
-    if (lang === "fr")
-      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **est**, **a**, **habite**." };
+    const examples = {
+      es: "Try: es / fui / voy / iré",
+      fr: "Try: est / suis allé / vais / serai",
+      de: "Try: ist / war / gehe / werde",
+      ga: "Try: tá / bhí / chuaigh / beidh"
+    };
 
-    if (lang === "ga")
-      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **tá sé…** or **is…**." };
-
-    if (lang === "de")
-      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **ist**, **hat**, **wohnt**." };
+    return {
+      score: 3,
+      focus: "Missing verb",
+      feedback: "Add a verb. " + examples[lang]
+    };
   }
 
   if (wc <= 4) {
     return {
       score: 5,
       focus: "Development",
-      feedback: "Good start. Add ONE more detail about appearance, personality or reason."
+      feedback: "Good start. Add ONE more detail about appearance, personality, or reason."
     };
   }
 
-  return null; // No rule block — allow AI refinement
+  return null;
 }
 
 // ---------------- AI LAYER ----------------
@@ -90,14 +127,8 @@ async function aiRefine(task, answer, lang) {
   if (!window.classifyAnswer) return null;
 
   try {
-    const res = await window.classifyAnswer({
-      task,
-      answer,
-      lang
-    });
-
-    return res;
-  } catch (e) {
+    return await window.classifyAnswer({ task, answer, lang });
+  } catch {
     console.warn("AI failed");
     return null;
   }
@@ -128,8 +159,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     out.classList.remove("hidden");
     out.innerHTML = "Thinking…";
-
-    // ---------------- RULE CHECK FIRST ----------------
 
     let result = ruleCheck(answer, lang);
 
