@@ -9,35 +9,37 @@
 <body>
 
 <main class="wrap">
-  <h1>Turbo Coach</h1>
-  <p class="sub">Write • Read feedback • Improve</p>
 
-  <div class="promptBox">
-    <strong>Task:</strong> Describe your best friend.
+  <h1>Turbo Coach</h1>
+
+  <div class="taskBox">
+    <strong>Task:</strong>
+    <span id="task"></span>
   </div>
 
-  <label>
-    Your answer
-    <textarea id="answer" rows="4" placeholder="Start typing…"></textarea>
-  </label>
+  <textarea id="answer" rows="4" placeholder="Write your answer here..."></textarea>
 
-  <label>
-    Language
+  <div class="controls">
     <select id="lang">
       <option value="es">Spanish</option>
       <option value="fr">French</option>
       <option value="de">German</option>
       <option value="ga">Irish</option>
     </select>
-  </label>
 
-  <button id="runBtn">Ask coach</button>
+    <button id="runBtn">Submit</button>
+  </div>
 
   <section id="out" class="card hidden"></section>
+
 </main>
 
-<!-- IMPORTANT: ai.js first -->
+<footer>
+  © 2026 Synge St Games — imagination and perseverance
+</footer>
+
 <script src="./ai.js"></script>
 <script src="./script.js"></script>
+
 </body>
 </html>
