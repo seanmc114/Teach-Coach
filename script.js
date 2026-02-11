@@ -1,192 +1,208 @@
 // ==============================
-// TURBO COACH — 3 ROUND ENGINE
+// TURBO COACH — HYBRID AUTHORITY ENGINE
 // ==============================
 
-const CONFIG = {
-  ROUNDS: 3   // Change to 5, 10 etc later for big game mode
-};
+const CONFIG = { ROUNDS: 3 };
 
 const PROMPT_BANK = [
   "Describe your best friend",
   "Describe someone in your family",
-  "Describe yourself",
   "Describe your school",
-  "Describe your house or flat",
-  "Describe your town or area",
-  "Describe your hobbies",
-  "Describe a typical weekend",
+  "Describe your house",
   "Describe your favourite subject",
-  "Describe a person you admire"
+  "Describe your weekend"
 ];
 
 let round = 0;
-let roundScores = [];
-let roundFocus = [];
+let scores = [];
+let focusLog = [];
 let currentPrompt = "";
+
+// ---------------- PROMPT ----------------
 
 function getRandomPrompt() {
   return PROMPT_BANK[Math.floor(Math.random() * PROMPT_BANK.length)];
 }
 
-// ---------------- RULE ENGINE ----------------
+// ---------------- VERB DETECTION ----------------
 
-function ruleCheck(answer, lang) {
+function hasVerb(answer, lang) {
   const a = answer.toLowerCase();
 
-  if (lang === "es") {
-    if (/\bmi amigo\b/.test(a) && /\beres\b/.test(a)) {
-      return { score: 3, focus: "Verb agreement", feedback: "“Eres” is for 'you'. Use “es” for 'he'." };
-    }
-  }
+  if (lang === "es")
+    return /\b(es|soy|eres|somos|está|estoy|estamos|tiene|tengo|tienes|vive|vivo|vives|hay|gustan?|puedo|podría|podre|podré)\b/.test(a);
 
-  if (lang === "fr") {
-    if (/\bcest\b/.test(a)) {
-      return { score: 4, focus: "Apostrophe", feedback: "Use “c’est” with an apostrophe." };
-    }
-    if (/\bami\b/.test(a) && /\bjolie\b/.test(a)) {
-      return { score: 4, focus: "Agreement", feedback: "“Ami” is masculine. Use “joli”, not “jolie”." };
-    }
-  }
+  if (lang === "fr")
+    return /\b(est|suis|es|sommes|avez|a|ont|ai|aime|habite|vais|va)\b/.test(a);
 
-  if (lang === "ga") {
-    if (/\bta se\b/.test(a)) {
-      return { score: 4, focus: "Accent", feedback: "Use “Tá sé” with a fada and accent." };
-    }
-  }
+  if (lang === "ga")
+    return /\b(tá|is|bhfuil|bíonn|bhí)\b/.test(a);
 
-  return null;
+  if (lang === "de")
+    return /\b(ist|bin|bist|hat|habe|hast|sind|mag|wohne)\b/.test(a);
+
+  return false;
 }
 
-// ---------------- FALLBACK ----------------
+// ---------------- RULE LAYER ----------------
 
-function fallbackCoach(answer) {
+function ruleCheck(answer, lang) {
+
   const wc = answer.trim().split(/\s+/).length;
-  if (wc < 2) return { score: 0, focus: "Start", feedback: "Write a full sentence." };
-  if (wc < 4) return { score: 4, focus: "Development", feedback: "Add one more clear detail." };
-  return { score: 7, focus: "Development", feedback: "Add one specific detail or reason." };
+
+  if (wc < 2) {
+    return {
+      score: 2,
+      focus: "Fragment",
+      feedback: "That’s not a full sentence yet. Add a subject and a verb."
+    };
+  }
+
+  if (!hasVerb(answer, lang)) {
+    if (lang === "es")
+      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **es**, **tiene**, **vive**." };
+
+    if (lang === "fr")
+      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **est**, **a**, **habite**." };
+
+    if (lang === "ga")
+      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **tá sé…** or **is…**." };
+
+    if (lang === "de")
+      return { score: 3, focus: "Missing verb", feedback: "Add a verb. Try: **ist**, **hat**, **wohnt**." };
+  }
+
+  if (wc <= 4) {
+    return {
+      score: 5,
+      focus: "Development",
+      feedback: "Good start. Add ONE more detail about appearance, personality or reason."
+    };
+  }
+
+  return null; // No rule block — allow AI refinement
 }
 
-// ---------------- END GAME SUMMARY ----------------
+// ---------------- AI LAYER ----------------
 
-function showSummary(out) {
+async function aiRefine(task, answer, lang) {
 
-  const avg = (roundScores.reduce((a,b)=>a+b,0) / roundScores.length).toFixed(1);
+  if (!window.classifyAnswer) return null;
 
-  const trend =
-    roundScores[2] > roundScores[0] ? "⬆ Improving" :
-    roundScores[2] < roundScores[0] ? "⬇ Declining" :
-    "→ Stable";
+  try {
+    const res = await window.classifyAnswer({
+      task,
+      answer,
+      lang
+    });
 
-  const bars = roundScores.map((s,i)=>
-    `Round ${i+1}: ${"█".repeat(Math.max(1, Math.round(s/1.5)))}`
-  ).join("<br>");
-
-  const focusCounts = {};
-  roundFocus.forEach(f => {
-    focusCounts[f] = (focusCounts[f] || 0) + 1;
-  });
-
-  const weakest = Object.keys(focusCounts).sort((a,b)=>focusCounts[b]-focusCounts[a])[0];
-
-  out.innerHTML = `
-    <h3>Game Complete</h3>
-    <div><strong>Scores:</strong> ${roundScores.join(", ")}</div>
-    <div><strong>Average:</strong> ${avg}</div>
-    <div><strong>Trend:</strong> ${trend}</div>
-    <div style="margin-top:10px;">${bars}</div>
-    <div style="margin-top:10px;"><strong>Main focus:</strong> ${weakest}</div>
-    <div style="margin-top:10px;"><strong>Coach says:</strong> 
-      Over these rounds your main focus was <b>${weakest}</b>. 
-      Keep working on that and aim to push your average above ${avg}.
-    </div>
-    <button id="playAgain">Play Again</button>
-  `;
-
-  document.getElementById("playAgain").onclick = () => {
-    round = 0;
-    roundScores = [];
-    roundFocus = [];
-    startNewRound(out);
-  };
+    return res;
+  } catch (e) {
+    console.warn("AI failed");
+    return null;
+  }
 }
 
-// ---------------- ROUND HANDLER ----------------
-
-function startNewRound(out) {
-  currentPrompt = getRandomPrompt();
-  document.getElementById("task").innerText = currentPrompt;
-  document.getElementById("answer").value = "";
-  document.getElementById("answer").disabled = false;
-  document.getElementById("answer").focus();
-  out.classList.add("hidden");
-}
-
-// ---------------- MAIN ----------------
+// ---------------- GAME LOGIC ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
 
   const runBtn = document.getElementById("runBtn");
+  const ans = document.getElementById("answer");
   const out = document.getElementById("out");
+  const langSelect = document.getElementById("lang");
+  const taskBox = document.getElementById("taskBox");
 
-  startNewRound(out);
+  currentPrompt = getRandomPrompt();
+  taskBox.innerText = "Task: " + currentPrompt;
 
   runBtn.onclick = async () => {
 
-    const ansBox = document.getElementById("answer");
-    const answer = ansBox.value.trim();
-    const lang = document.getElementById("lang").value;
+    const answer = ans.value.trim();
+    const lang = langSelect.value;
 
-    ansBox.disabled = true;
+    if (!answer) return;
+
+    ans.disabled = true;
+    runBtn.disabled = true;
+
     out.classList.remove("hidden");
     out.innerHTML = "Thinking…";
+
+    // ---------------- RULE CHECK FIRST ----------------
 
     let result = ruleCheck(answer, lang);
 
     if (!result) {
-      try {
-        result = await window.classifyAnswer({
-          task: currentPrompt,
-          answer,
-          lang
-        });
-      } catch {
-        result = fallbackCoach(answer);
-      }
+      result = await aiRefine(currentPrompt, answer, lang);
     }
 
+    if (!result) {
+      result = {
+        score: 6,
+        focus: "Development",
+        feedback: "Good structure. Add one more specific detail."
+      };
+    }
+
+    scores.push(result.score);
+    focusLog.push(result.focus);
     round++;
-    roundScores.push(result.score);
-    roundFocus.push(result.focus);
+
+    renderResult(result);
+
+    if (round === CONFIG.ROUNDS) {
+      renderSummary();
+    }
+
+    ans.disabled = false;
+    runBtn.disabled = false;
+  };
+
+  function renderResult(result) {
 
     out.innerHTML = `
       <div><strong>Score:</strong> ${result.score}/10</div>
-      <div><strong>Coach says:</strong> ${result.feedback}</div>
-      <div style="margin-top:10px;">
+      <div><strong>Focus:</strong> ${result.focus}</div>
+      <div><strong>Do this:</strong> ${result.feedback}</div>
+
+      <div class="teacherBar">
         <button data-v="clear">👍 Clear</button>
         <button data-v="unclear">🔁 Could be clearer</button>
         <button data-v="bad">❌ Not helpful</button>
       </div>
-      <button id="nextRound">${round < CONFIG.ROUNDS ? "Next Round" : "See Results"}</button>
     `;
 
-    out.querySelectorAll("[data-v]").forEach(btn=>{
+    out.querySelectorAll(".teacherBar button").forEach(btn => {
       btn.onclick = () => {
-        console.log("TEACHER FEEDBACK", {
-          answer,
-          result,
-          rating: btn.dataset.v
-        });
-        btn.innerText = "✓";
+        console.log("Teacher feedback:", btn.dataset.v);
         btn.disabled = true;
       };
     });
+  }
 
-    document.getElementById("nextRound").onclick = () => {
-      if (round < CONFIG.ROUNDS) {
-        startNewRound(out);
-      } else {
-        showSummary(out);
-      }
+  function renderSummary() {
+
+    const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+
+    out.innerHTML += `
+      <hr>
+      <h3>End of Round</h3>
+      <div>Average score: ${avg}/10</div>
+      <div>Main focus areas: ${[...new Set(focusLog)].join(", ")}</div>
+      <button id="newGame">Play again</button>
+    `;
+
+    document.getElementById("newGame").onclick = () => {
+      round = 0;
+      scores = [];
+      focusLog = [];
+      currentPrompt = getRandomPrompt();
+      taskBox.innerText = "Task: " + currentPrompt;
+      out.classList.add("hidden");
+      ans.value = "";
+      ans.focus();
     };
-  };
+  }
+
 });
