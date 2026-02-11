@@ -1,5 +1,6 @@
+
 // ==============================
-// TURBO COACH — STABLE GAME VERSION
+// TURBO COACH — HYBRID AUTHORITY ENGINE (ALL TENSES)
 // ==============================
 
 const CONFIG = { ROUNDS: 3 };
@@ -15,8 +16,8 @@ const PROMPT_BANK = [
 
 let round = 0;
 let scores = [];
+let focusLog = [];
 let currentPrompt = "";
-let startTime = null;
 
 // ---------------- PROMPTS ----------------
 
@@ -24,30 +25,57 @@ function getRandomPrompt() {
   return PROMPT_BANK[Math.floor(Math.random() * PROMPT_BANK.length)];
 }
 
-// ---------------- TIMER ----------------
-
-function getElapsedTime() {
-  if (!startTime) return 0;
-  return Math.floor((Date.now() - startTime) / 1000);
-}
-
-// ---------------- VERB DETECTION (MULTI-TENSE SAFE) ----------------
+// ---------------- VERB DETECTION (MULTI-TENSE) ----------------
 
 function hasVerb(answer, lang) {
 
   const a = answer.toLowerCase();
 
-  if (lang === "es")
-    return /\b(fui|fue|era|eran|estaba|estaban|soy|eres|es|somos|está|estoy|tengo|tiene|tenemos|hay|voy|vas|van|iré|podré|podría|[a-záéíóúñ]+(o|as|a|amos|an|é|ó|aba|ía))\b/.test(a);
+  // -------- SPANISH --------
+  if (lang === "es") {
+    return /\b(
+      fui|fue|fuimos|eran?|era|estaba|estaban|estuve|estuvo|
+      es|soy|eres|somos|está|estoy|estamos|
+      hay|hubo|había|habia|
+      iré|ire|irá|ira|vamos|voy|vas|van|
+      [a-záéíóúñ]+(o|as|a|amos|an|é|aste|ó|aron|aba|abas|aban|ía|ías|ieron|í)
+    )\b/i.test(a);
+  }
 
-  if (lang === "fr")
-    return /\b(suis|es|est|sommes|ai|as|a|étais|allé|vais|irai|[a-zéèê]+(e|es|ent|ons|é|ait))\b/.test(a);
+  // -------- FRENCH --------
+  if (lang === "fr") {
+    return /\b(
+      suis|es|est|sommes|êtes|sont|
+      ai|as|a|avons|avez|ont|
+      étais|était|étaient|
+      allé|allée|allés|allées|
+      vais|va|allons|irez|irai|
+      [a-zéèê]+(e|es|ent|ons|ai|ais|ait|aient|é|ée|ées|és)
+    )\b/i.test(a);
+  }
 
-  if (lang === "de")
-    return /\b(bin|bist|ist|sind|war|habe|hat|ging|werde|[a-zäöüß]+(e|st|t|en))\b/.test(a);
+  // -------- GERMAN --------
+  if (lang === "de") {
+    return /\b(
+      bin|bist|ist|sind|seid|
+      habe|hast|hat|haben|hattet|
+      war|waren|warst|
+      ging|gingen|gingst|
+      werde|wirst|wird|werden|
+      [a-zäöüß]+(e|st|t|en)
+    )\b/i.test(a);
+  }
 
-  if (lang === "ga")
-    return /\b(tá|bhí|is|bíonn|chuaigh|rachaidh|[a-záéíóú]+(ann|aim|amar|fidh))\b/.test(a);
+  // -------- IRISH --------
+  if (lang === "ga") {
+    return /\b(
+      tá|táim|táimid|bhí|bhíomar|bhfuil|
+      is|ba|bíonn|
+      chuaigh|rachaidh|rachaimid|
+      rinne|rinneamar|
+      [a-záéíóú]+(ann|aim|amar|fidh|faidh|íonn)
+    )\b/i.test(a);
+  }
 
   return false;
 }
@@ -59,15 +87,35 @@ function ruleCheck(answer, lang) {
   const wc = answer.trim().split(/\s+/).length;
 
   if (wc < 2) {
-    return { score: 2, focus: "Fragment", feedback: "Write a full sentence." };
+    return {
+      score: 2,
+      focus: "Fragment",
+      feedback: "That’s not a full sentence yet. Add a subject and a verb."
+    };
   }
 
   if (!hasVerb(answer, lang)) {
-    return { score: 3, focus: "Missing verb", feedback: "Add a verb to make it a real sentence." };
+
+    const examples = {
+      es: "Try: es / fui / voy / iré",
+      fr: "Try: est / suis allé / vais / serai",
+      de: "Try: ist / war / gehe / werde",
+      ga: "Try: tá / bhí / chuaigh / beidh"
+    };
+
+    return {
+      score: 3,
+      focus: "Missing verb",
+      feedback: "Add a verb. " + examples[lang]
+    };
   }
 
   if (wc <= 4) {
-    return { score: 5, focus: "Development", feedback: "Good start. Add one more clear detail." };
+    return {
+      score: 5,
+      focus: "Development",
+      feedback: "Good start. Add ONE more detail about appearance, personality, or reason."
+    };
   }
 
   return null;
@@ -82,6 +130,7 @@ async function aiRefine(task, answer, lang) {
   try {
     return await window.classifyAnswer({ task, answer, lang });
   } catch {
+    console.warn("AI failed");
     return null;
   }
 }
@@ -96,18 +145,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const langSelect = document.getElementById("lang");
   const taskBox = document.getElementById("taskBox");
 
-  // SET INITIAL PROMPT
   currentPrompt = getRandomPrompt();
   taskBox.innerText = "Task: " + currentPrompt;
 
   runBtn.onclick = async () => {
 
-    if (!startTime) startTime = Date.now();
-
     const answer = ans.value.trim();
     const lang = langSelect.value;
 
     if (!answer) return;
+
+    ans.disabled = true;
+    runBtn.disabled = true;
 
     out.classList.remove("hidden");
     out.innerHTML = "Thinking…";
@@ -119,57 +168,65 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!result) {
-      result = { score: 6, focus: "Development", feedback: "Add one more specific detail." };
+      result = {
+        score: 6,
+        focus: "Development",
+        feedback: "Good structure. Add one more specific detail."
+      };
     }
 
     scores.push(result.score);
+    focusLog.push(result.focus);
     round++;
 
-    renderRound(result);
-
-    ans.value = "";
-    ans.focus();
+    renderResult(result);
 
     if (round === CONFIG.ROUNDS) {
       renderSummary();
     }
+
+    ans.disabled = false;
+    runBtn.disabled = false;
   };
 
-  function renderRound(result) {
-
-    const progress = Math.round((round / CONFIG.ROUNDS) * 100);
+  function renderResult(result) {
 
     out.innerHTML = `
-      <div><strong>Round ${round}/${CONFIG.ROUNDS}</strong></div>
-
-      <div style="height:8px;background:#ddd;border-radius:8px;margin:8px 0;overflow:hidden;">
-        <div style="height:8px;background:#003366;width:${progress}%;"></div>
-      </div>
-
       <div><strong>Score:</strong> ${result.score}/10</div>
       <div><strong>Focus:</strong> ${result.focus}</div>
       <div><strong>Do this:</strong> ${result.feedback}</div>
+
+      <div class="teacherBar">
+        <button data-v="clear">👍 Clear</button>
+        <button data-v="unclear">🔁 Could be clearer</button>
+        <button data-v="bad">❌ Not helpful</button>
+      </div>
     `;
+
+    out.querySelectorAll(".teacherBar button").forEach(btn => {
+      btn.onclick = () => {
+        console.log("Teacher feedback:", btn.dataset.v);
+        btn.disabled = true;
+      };
+    });
   }
 
   function renderSummary() {
 
     const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
-    const time = getElapsedTime();
 
-    out.innerHTML = `
+    out.innerHTML += `
       <hr>
-      <h3>Game Complete</h3>
-      <div><strong>Average Score:</strong> ${avg}/10</div>
-      <div><strong>Time:</strong> ${time}s</div>
-      <div>Round scores: ${scores.join(" → ")}</div>
+      <h3>End of Round</h3>
+      <div>Average score: ${avg}/10</div>
+      <div>Main focus areas: ${[...new Set(focusLog)].join(", ")}</div>
       <button id="newGame">Play again</button>
     `;
 
     document.getElementById("newGame").onclick = () => {
       round = 0;
       scores = [];
-      startTime = null;
+      focusLog = [];
       currentPrompt = getRandomPrompt();
       taskBox.innerText = "Task: " + currentPrompt;
       out.classList.add("hidden");
