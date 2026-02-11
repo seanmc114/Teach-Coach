@@ -22,7 +22,7 @@ body::before {
   width: 500px;
   height: 500px;
   transform: translate(-50%, -50%);
-  background: url("./crest.png") no-repeat center center;
+  background: url("https://bunscoilsynge.ie/wp-content/uploads/2025/10/School-Crest-300x300-1.jpg") no-repeat center center;
   background-size: contain;
   opacity: 0.07;
   pointer-events: none;
