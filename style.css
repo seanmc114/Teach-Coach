@@ -1,15 +1,15 @@
 /* ==============================
-   TURBO COACH — FINAL GAME STYLE
+   TURBO COACH — RELAXED EDITION
    ============================== */
 
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
-  background-color: #f5f7fa;
-  position: relative;
+  background: linear-gradient(135deg, #eef3fa, #f8fbff);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 /* -------- WATERMARK CREST -------- */
@@ -19,89 +19,103 @@ body::before {
   position: fixed;
   top: 50%;
   left: 50%;
-  width: 500px;
-  height: 500px;
+  width: 600px;
+  height: 600px;
   transform: translate(-50%, -50%);
-  background: url("https://bunscoilsynge.ie/wp-content/uploads/2025/10/School-Crest-300x300-1.jpg") no-repeat center center;
+  background: url("./crest.png") no-repeat center center;
   background-size: contain;
-  opacity: 0.07;
+  opacity: 0.09;
   pointer-events: none;
   z-index: 0;
 }
 
-/* -------- MAIN CONTENT -------- */
+/* -------- MAIN WRAP -------- */
 
 .wrap {
   position: relative;
   z-index: 1;
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  width: 90%;
+  max-width: 1000px;
+  margin: 60px auto;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
 }
 
 /* -------- HEADINGS -------- */
 
 h1 {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  font-weight: 600;
 }
 
-/* -------- TASK BOX -------- */
+/* -------- TASK -------- */
 
 .taskBox {
-  margin-bottom: 15px;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #e6eef8;
+  border-radius: 14px;
 }
 
 /* -------- TEXTAREA -------- */
 
 textarea {
   width: 100%;
-  font-size: 1.1rem;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  font-size: 1.2rem;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid #d8e2f0;
   resize: vertical;
-  min-height: 100px;
-  margin-bottom: 15px;
+  min-height: 140px;
+  margin-bottom: 20px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #3366cc;
+  box-shadow: 0 0 0 3px rgba(51,102,204,0.2);
 }
 
 /* -------- CONTROLS -------- */
 
 .controls {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 15px;
+  margin-bottom: 30px;
 }
 
 select, button {
   font-size: 1rem;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid #d0d8e5;
   cursor: pointer;
 }
 
 button {
-  background-color: #003366;
+  background: #003366;
   color: white;
   border: none;
+  transition: 0.2s ease;
 }
 
 button:hover {
-  background-color: #004a99;
+  background: #004a99;
 }
 
 /* -------- RESULT CARD -------- */
 
 .card {
-  padding: 15px;
-  border-radius: 8px;
-  background-color: #eef3fa;
-  margin-top: 10px;
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(240, 246, 255, 0.95);
+  margin-top: 20px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
 
 .hidden {
@@ -113,7 +127,7 @@ button:hover {
 footer {
   margin-top: auto;
   text-align: center;
-  padding: 15px 0;
+  padding: 20px 0;
   font-size: 0.9rem;
-  color: #666;
+  color: #555;
 }
